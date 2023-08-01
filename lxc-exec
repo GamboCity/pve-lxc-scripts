@@ -5,10 +5,12 @@ if [[ $1 =~ ^[0-9]*$ ]]; then
     CONTAINER=$1
     shift
     COMMAND=$@
-    echo -ne "\e[1;32mexecuting \"$COMMAND\" in container #${CONTAINER} ($(grep -m 1 hostname /etc/pve/lxc/${CONTAINER}.conf | awk '{print $NF}'))\e[0m\n"
-    pct exec $CONTAINER /bin/sh -- -c "$COMMAND"
+    echo -ne "$(tput setaf 10)executing \"$COMMAND\" in container #${CONTAINER} ($(grep -m 1 hostname /etc/pve/lxc/${CONTAINER}.conf | awk '{print $NF}'))$(tput sgr0)\n"
+    exec > >(trap "" INT TERM; sed "s/^/$(tput setaf 14)$CONTAINER | $(tput sgr0)/")
+    exec 2> >(trap "" INT TERM; sed "s/^/$(tput setaf 1)$CONTAINER | $(tput setaf 9)/" >&2)
+    pct exec $CONTAINER /bin/bash -- -c "$COMMAND"
   else
-    echo -ne "\e[1;31mcontainer $1 is not running\e[0m\n"
+    echo -ne "$(tput setaf 10)container $1 is not running$(tput sgr0)\n"
     exit 1
   fi
 fi

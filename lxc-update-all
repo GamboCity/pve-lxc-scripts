@@ -2,24 +2,26 @@
 
 CONTAINERS=( $(pct list | grep running | awk '{print $1}') )
 
-apt_update() {
-pct exec $CONTAINER "apt-get update"
-pct exec $CONTAINER "apt-get dist-upgrade -y"
-pct exec $CONTAINER "apt-get clean"
-pct exec $CONTAINER "apt-get autoremove -y"
+run_update() {
+  display_line
+  display_msg_center "$(tput setaf 14)CONTAINER $1 UPDATING...$(tput sgr0)"
+  printf "\n\n"
+  lxc-exec $1 "which apt-get > /dev/null && apt-get update && apt-get dist-upgrade -y && apt-get clean && apt-get autoremove -y"
+  lxc-exec $1 "[[ -f \"/root/update.sh\" ]] && bash /root/update.sh"
+  printf "\n\n"
 }
 
-yum_update() {
-pct exec $CONTAINER "yum -y update"
+display_line() {
+  printf "$(tput setaf 14)%.s─$(tput sgr0)" $(seq 1 $(tput cols))
 }
 
-apk_update() {
-pct exec $CONTAINER "apk upgrade"
+display_msg_center(){
+    columns="$(tput cols)"
+    printf "%*s\n" $(( (${#1} + columns) / 2)) "$1"
 }
 
-for CONTAINER in ${CONTAINERS[@]}
-do
-  pct exec $CONTAINER "which apt-get >/dev/null" && apt_update
-  pct exec $CONTAINER "which yum >/dev/null" && yum_update
-  pct exec $CONTAINER "which apk >/dev/null" && apk_update
-done
+export -f run_update
+export -f display_line
+export -f display_msg_center
+
+parallel --keep-order --progress "run_update {}" ::: ${CONTAINERS[@]}
